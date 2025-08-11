@@ -7,6 +7,9 @@ defmodule WildfiresWs.Application do
 
   @impl true
   def start(_type, _args) do
+    # Initialize ETS table for incidents cache
+    :ets.new(:incidents, [:set, :named_table, :public, read_concurrency: true])
+
     children = [
       WildfiresWsWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:wildfires_ws, :dns_cluster_query) || :ignore},

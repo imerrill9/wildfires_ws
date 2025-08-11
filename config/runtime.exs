@@ -8,7 +8,7 @@ import Config
 
 # Default environment variables
 config :wildfires_ws,
-  esri_incidents_url: System.get_env("ESRI_INCIDENTS_URL") || "https://services3.arcgis.com/T4QMspbfLg3qTGWY/ArcGIS/rest/services/USA_Current_Wildfires/FeatureServer/0/query",
+  esri_incidents_url: System.get_env("ESRI_INCIDENTS_URL") || "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/0",
   poll_interval_ms: String.to_integer(System.get_env("POLL_INTERVAL_MS") || "30000")
 
 # Handle SECRET_KEY_BASE for all environments
@@ -16,8 +16,11 @@ secret_key_base =
   System.get_env("SECRET_KEY_BASE") ||
     case config_env() do
       :dev ->
-        # Generate a secret for dev if not provided
-        :crypto.strong_rand_bytes(64) |> Base.encode64()
+        # Use a hardcoded secret for development mix phx.gen.secret
+        "zzwDDu+os8kORfUdm0y4FpXd0RckpW8m7X0zv5Cxhp7tqBshzooICuagKPPTHWEH"
+      :test ->
+        # Use a hardcoded secret for testing
+        "kW5/csWewxzdxDzNP6ubflc7+62AQSiSGkOuQi035cEPkAUvrGg8sR+nMZc/GcO/"
       _ ->
         raise """
         environment variable SECRET_KEY_BASE is missing.
