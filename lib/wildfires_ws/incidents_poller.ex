@@ -39,7 +39,9 @@ defmodule WildfiresWs.IncidentsPoller do
 
     state = %{
       poll_interval_ms: poll_interval_ms,
-      first_run: true
+      first_run: true,
+      last_poll_at: nil,
+      next_poll_timer_ref: nil
     }
 
     # Schedule immediate poll
@@ -60,9 +62,9 @@ defmodule WildfiresWs.IncidentsPoller do
     end
 
     # Schedule next poll
-    Process.send_after(self(), :poll, state.poll_interval_ms)
+    next_ref = Process.send_after(self(), :poll, state.poll_interval_ms)
 
-    {:noreply, %{state | first_run: false}}
+    {:noreply, %{state | first_run: false, last_poll_at: DateTime.utc_now(), next_poll_timer_ref: next_ref}}
   end
 
   @impl true
@@ -222,5 +224,39 @@ defmodule WildfiresWs.IncidentsPoller do
     else
       Logger.debug("No changes detected, skipping delta broadcast")
     end
+  end
+
+  ## Public metrics API
+
+  @doc """
+  Returns health/telemetry metrics for the poller.
+
+  - last_poll_at: ISO8601 string or nil
+  - next_poll_in_ms: integer milliseconds until next poll (0 if not scheduled)
+  - incident_count: integer number of incidents currently stored
+  """
+  def metrics do
+    GenServer.call(__MODULE__, :metrics)
+  end
+
+  @impl true
+  def handle_call(:metrics, _from, state) do
+    next_ms =
+      case state.next_poll_timer_ref do
+        nil -> 0
+        ref ->
+          case Process.read_timer(ref) do
+            false -> 0
+            value when is_integer(value) and value >= 0 -> value
+          end
+      end
+
+    reply = %{
+      last_poll_at: if(state.last_poll_at, do: DateTime.to_iso8601(state.last_poll_at), else: nil),
+      next_poll_in_ms: next_ms,
+      incident_count: IncidentsStore.count()
+    }
+
+    {:reply, reply, state}
   end
 end

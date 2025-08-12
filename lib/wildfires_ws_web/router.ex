@@ -5,8 +5,18 @@ defmodule WildfiresWsWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :health do
+    plug :accepts, ["json"]
+  end
+
   scope "/api", WildfiresWsWeb do
     pipe_through :api
+  end
+
+  scope "/", WildfiresWsWeb do
+    pipe_through :health
+
+    get "/_health", HealthController, :show
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
