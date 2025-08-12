@@ -12,3 +12,8 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+# Use a fake ArcGIS client in tests and disable automatic poller start
+config :wildfires_ws,
+  arcgis_client: WildfiresWs.Test.FakeArcgisClient,
+  enable_poller: false

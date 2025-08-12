@@ -77,7 +77,9 @@ defmodule WildfiresWs.IncidentsPoller do
   ## Private Functions
 
   defp poll_and_process do
-    case ArcgisClient.fetch_all_incidents() do
+    client_mod = Application.get_env(:wildfires_ws, :arcgis_client, ArcgisClient)
+
+    case client_mod.fetch_all_incidents() do
       {:ok, features} ->
         Logger.debug("Fetched #{length(features)} features")
         geojson_features = transform_features(features)

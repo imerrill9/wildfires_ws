@@ -10,17 +10,22 @@ defmodule WildfiresWs.Application do
     # Initialize ETS table for incidents cache
     :ets.new(:incidents, [:set, :named_table, :public, read_concurrency: true])
 
-    children = [
+    base_children = [
       WildfiresWsWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:wildfires_ws, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: WildfiresWs.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: WildfiresWs.Finch},
-      # Start the incidents poller
-      WildfiresWs.IncidentsPoller,
       # Start to serve requests, typically the last entry
       WildfiresWsWeb.Endpoint
     ]
+
+    poller_children =
+      if Application.get_env(:wildfires_ws, :enable_poller, true),
+        do: [WildfiresWs.IncidentsPoller],
+        else: []
+
+    children = base_children ++ poller_children
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
