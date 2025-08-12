@@ -16,9 +16,9 @@ defmodule WildfiresWs.ArcgisClient do
   Fetches all wildfire incidents from the ArcGIS service with pagination.
 
   Uses the ESRI_INCIDENTS_URL environment variable or falls back to the default URL.
-  Handles pagination automatically until all records are retrieved or the transfer limit is exceeded.
+  Requests GeoJSON format (f=geojson) by default and paginates until all records are retrieved.
 
-  Returns a list of ESRI features as maps in their raw ESRI schema format.
+  Returns a list of features (GeoJSON Feature maps when f=geojson; ESRI features if provider ignores f=geojson).
 
   ## Examples
 
@@ -35,7 +35,8 @@ defmodule WildfiresWs.ArcgisClient do
 
   defp fetch_all_incidents_recursive(url, offset, accumulated_features) do
     params = %{
-      f: "json",
+      # Prefer GeoJSON output when supported by the service
+      f: "geojson",
       where: "1=1",
       outFields: "*",
       returnGeometry: true,
@@ -46,12 +47,21 @@ defmodule WildfiresWs.ArcgisClient do
 
     case fetch_with_retry(url, params) do
       {:ok, response} ->
+        # For both ESRI JSON and GeoJSON, the features are under "features"
         features = Map.get(response, "features", [])
+        # Some servers only signal pagination via exceededTransferLimit in ESRI JSON; for GeoJSON just continue while page is full
         exceeded_limit = Map.get(response, "exceededTransferLimit", false)
+
+        if offset == 0 do
+          is_geojson = Map.get(response, "type") == "FeatureCollection" and match?(%{"type" => "Feature"}, List.first(features) || %{})
+          sample = List.first(features) || %{}
+          Logger.debug("ArcGIS response format: #{if is_geojson, do: "geojson", else: "esri_json"}")
+          Logger.debug("ArcGIS response sample feature keys: #{inspect(Map.keys(sample))}")
+        end
 
         new_accumulated = accumulated_features ++ features
 
-        if exceeded_limit and length(features) == @page_size do
+        if length(features) == @page_size or exceeded_limit do
           # More data available, continue pagination
           Logger.info(
             "Fetched #{length(features)} features at offset #{offset}, continuing pagination"
@@ -96,7 +106,15 @@ defmodule WildfiresWs.ArcgisClient do
 
   defp make_request(url, params) do
     case Req.get(url, params: params, receive_timeout: 30_000) do
-      {:ok, %Req.Response{status: 200, body: body}} ->
+      # Body already decoded by Req (common default)
+      {:ok, %Req.Response{status: 200, body: %{} = decoded}} ->
+        case Map.get(decoded, "error") do
+          nil -> {:ok, decoded}
+          error -> {:error, {:esri_error, error}}
+        end
+
+      # Body is a JSON binary string; decode manually
+      {:ok, %Req.Response{status: 200, body: body}} when is_binary(body) ->
         case Jason.decode(body) do
           {:ok, decoded} ->
             case Map.get(decoded, "error") do

@@ -16,8 +16,8 @@ defmodule WildfiresWs.Application do
       {Phoenix.PubSub, name: WildfiresWs.PubSub},
       # Start the Finch HTTP client for sending emails
       {Finch, name: WildfiresWs.Finch},
-      # Start a worker by calling: WildfiresWs.Worker.start_link(arg)
-      # {WildfiresWs.Worker, arg},
+      # Start the incidents poller
+      WildfiresWs.IncidentsPoller,
       # Start to serve requests, typically the last entry
       WildfiresWsWeb.Endpoint
     ]

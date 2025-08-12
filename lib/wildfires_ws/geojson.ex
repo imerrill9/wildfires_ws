@@ -1,9 +1,9 @@
 defmodule WildfiresWs.GeoJSON do
   @moduledoc """
-  GeoJSON transformer for converting ESRI features to GeoJSON format.
+  GeoJSON utilities.
 
-  Handles transformation of ESRI point geometries to GeoJSON features
-  while preserving attributes and building feature collections.
+  Provides helpers for building FeatureCollections and (optionally)
+  converting ESRI features to GeoJSON when needed.
   """
 
   @doc """
