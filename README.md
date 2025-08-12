@@ -25,13 +25,6 @@ erlang 28.0
 elixir 1.18.4-otp-28
 ```
 
-Optional (for reproducible Docker CLIs):
-
-```bash
-asdf plugin add docker || true
-asdf plugin add docker-compose || true
-```
-
 ### Ensure your shell uses asdf (not Homebrew)
 
 - Verify your shell resolves to asdf shims:
@@ -64,7 +57,7 @@ Copy `.env.sample` to `.env` and configure the following variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `ESRI_INCIDENTS_URL` | ESRI ArcGIS incidents service URL | `https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/0` |
+| `ESRI_INCIDENTS_URL` | ESRI ArcGIS incidents service URL | `https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/0/query` |
 | `POLL_INTERVAL_MS` | Polling interval in milliseconds | `30000` (30 seconds) |
 | `PORT` | Server port | `4000` |
 | `SECRET_KEY_BASE` | Phoenix secret key (generate with `mix phx.gen.secret`) | Required for production |
@@ -84,17 +77,31 @@ iex -S mix phx.server
 
 The application will be available at [`localhost:4000`](http://localhost:4000).
 
-### Production
-For production deployment, use releases:
-```bash
-mix release
-PHX_SERVER=true bin/wildfires_ws start
-```
+### UI
+Visiting `/` displays a map of current wildfire locations. It loads an initial snapshot and receives live updates over the `fires:incidents` WebSocket topic.
 
 ## API Endpoints
 
 ### Health Check
 - **GET** `/_health` - Application health status
+
+### Incidents
+- **GET** `/api/incidents` - Returns the current wildfire incidents as a GeoJSON FeatureCollection
+  - Content-Type: `application/geo+json`
+  - Example shape:
+    ```json
+    {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "id": 123,
+          "geometry": { "type": "Point", "coordinates": [-120.5, 38.2] },
+          "properties": { "NAME": "Fire Name" }
+        }
+      ]
+    }
+    ```
 
 ## WebSocket API
 
@@ -106,42 +113,48 @@ ws://localhost:4000/socket/websocket
 
 ### Topics and Events
 
-#### `fires:lobby` Topic
+#### `fires:incidents` topic
 Subscribe to receive wildfire incident updates:
+
+- On join, the server pushes a `snapshot` event with the full FeatureCollection.
+- On subsequent polls, clients receive `delta` events describing changes.
 
 **Join:**
 ```json
 {
   "event": "phx_join",
-  "topic": "fires:lobby",
+  "topic": "fires:incidents",
   "payload": {},
   "ref": 1
 }
 ```
 
 **Events Received:**
-- `new_incident` - New wildfire incident detected
-- `incident_update` - Existing incident updated
-- `incident_resolved` - Incident marked as resolved
-
-**Example Event:**
-```json
-{
-  "event": "new_incident",
-  "topic": "fires:lobby",
-  "payload": {
-    "id": "incident_123",
-    "name": "Smith Canyon Fire",
-    "location": {
-      "lat": 34.0522,
-      "lng": -118.2437
-    },
-    "status": "active",
-    "timestamp": "2024-01-15T10:30:00Z"
-  },
-  "ref": 0
-}
-```
+- `snapshot` (first join and first poller run):
+  ```json
+  {
+    "event": "snapshot",
+    "topic": "fires:incidents",
+    "payload": {
+      "type": "FeatureCollection",
+      "features": [
+        { "type": "Feature", "id": 1, "geometry": { "type": "Point", "coordinates": [-120.0, 38.0] }, "properties": { "NAME": "Alpha" } }
+      ]
+    }
+  }
+  ```
+- `delta` (subsequent updates):
+  ```json
+  {
+    "event": "delta",
+    "topic": "fires:incidents",
+    "payload": {
+      "added": [ { "type": "Feature", "id": 3, "geometry": { "type": "Point", "coordinates": [-120.0, 38.0] }, "properties": { "NAME": "Charlie" } } ],
+      "updated": [ { "type": "Feature", "id": 1, "geometry": { "type": "Point", "coordinates": [-120.0, 38.0] }, "properties": { "NAME": "Alpha Updated" } } ],
+      "deleted": [2]
+    }
+  }
+  ```
 
 ## Docker
 
