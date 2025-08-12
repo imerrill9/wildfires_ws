@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+
+# Environment files
+.env
+.env.*
+!.env.sample
+
+# Build artifacts
+_build/
+deps/
+*.ez
+
+# Test files
+test/
+priv/gettext/
+
+# Development files
+.elixir_ls/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore

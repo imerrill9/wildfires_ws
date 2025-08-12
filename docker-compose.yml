@@ -1,0 +1,14 @@
+services:
+  wildfires_ws:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - PHX_SERVER=true
+      - PORT=4000
+      - ESRI_INCIDENTS_URL=${ESRI_INCIDENTS_URL:-https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/0/query}
+      - POLL_INTERVAL_MS=${POLL_INTERVAL_MS:-30000}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE}
+    volumes:
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
