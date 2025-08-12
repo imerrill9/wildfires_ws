@@ -7,12 +7,6 @@ config :wildfires_ws, WildfiresWsWeb.Endpoint,
   secret_key_base: "dhn649FW9pXS9fcbHCHbkor86TlKGAyY18oI7/kb65qfuNCBuPCc2WmGfcIVWo8R",
   server: false
 
-# In test we don't send emails
-config :wildfires_ws, WildfiresWs.Mailer, adapter: Swoosh.Adapters.Test
-
-# Disable swoosh api client as it is only required for production adapters
-config :swoosh, :api_client, false
-
 # Print only warnings and errors during test
 config :logger, level: :warning
 

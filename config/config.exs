@@ -21,15 +21,6 @@ config :wildfires_ws, WildfiresWsWeb.Endpoint,
   pubsub_server: WildfiresWs.PubSub,
   live_view: [signing_salt: "DI83FhsH"]
 
-# Configures the mailer
-#
-# By default it uses the "Local" adapter which stores the emails
-# locally. You can see the emails in your browser, at "/dev/mailbox".
-#
-# For production it's recommended to configure a different adapter
-# at the `config/runtime.exs`.
-config :wildfires_ws, WildfiresWs.Mailer, adapter: Swoosh.Adapters.Local
-
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",

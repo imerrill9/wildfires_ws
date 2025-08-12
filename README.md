@@ -165,9 +165,6 @@ docker compose up --build
 ### Live Dashboard
 In development, access the Phoenix LiveDashboard at `/dev/dashboard` for real-time metrics and debugging.
 
-### Mailbox Preview
-View email previews at `/dev/mailbox` during development.
-
 ## Learn More
 
 - [Phoenix Framework](https://www.phoenixframework.org/)

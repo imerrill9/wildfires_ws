@@ -49,15 +49,9 @@ defmodule WildfiresWs.ArcgisClient do
       {:ok, response} ->
         # For both ESRI JSON and GeoJSON, the features are under "features"
         features = Map.get(response, "features", [])
+
         # Some servers only signal pagination via exceededTransferLimit in ESRI JSON; for GeoJSON just continue while page is full
         exceeded_limit = Map.get(response, "exceededTransferLimit", false)
-
-        if offset == 0 do
-          is_geojson = Map.get(response, "type") == "FeatureCollection" and match?(%{"type" => "Feature"}, List.first(features) || %{})
-          sample = List.first(features) || %{}
-          Logger.debug("ArcGIS response format: #{if is_geojson, do: "geojson", else: "esri_json"}")
-          Logger.debug("ArcGIS response sample feature keys: #{inspect(Map.keys(sample))}")
-        end
 
         new_accumulated = accumulated_features ++ features
 

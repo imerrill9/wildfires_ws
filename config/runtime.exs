@@ -8,7 +8,9 @@ import Config
 
 # Default environment variables
 config :wildfires_ws,
-  esri_incidents_url: System.get_env("ESRI_INCIDENTS_URL") || "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/0",
+  esri_incidents_url:
+    System.get_env("ESRI_INCIDENTS_URL") ||
+      "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/0",
   poll_interval_ms: String.to_integer(System.get_env("POLL_INTERVAL_MS") || "30000")
 
 # Handle SECRET_KEY_BASE for all environments
@@ -18,9 +20,11 @@ secret_key_base =
       :dev ->
         # Use a hardcoded secret for development mix phx.gen.secret
         "zzwDDu+os8kORfUdm0y4FpXd0RckpW8m7X0zv5Cxhp7tqBshzooICuagKPPTHWEH"
+
       :test ->
         # Use a hardcoded secret for testing
         "kW5/csWewxzdxDzNP6ubflc7+62AQSiSGkOuQi035cEPkAUvrGg8sR+nMZc/GcO/"
+
       _ ->
         raise """
         environment variable SECRET_KEY_BASE is missing.
@@ -101,22 +105,4 @@ if config_env() == :prod do
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
-
-  # ## Configuring the mailer
-  #
-  # In production you need to configure the mailer to use a different adapter.
-  # Also, you may need to configure the Swoosh API client of your choice if you
-  # are not using SMTP. Here is an example of the configuration:
-  #
-  #     config :wildfires_ws, WildfiresWs.Mailer,
-  #       adapter: Swoosh.Adapters.Mailgun,
-  #       api_key: System.get_env("MAILGUN_API_KEY"),
-  #       domain: System.get_env("MAILGUN_DOMAIN")
-  #
-  # For this example you need include a HTTP client required by Swoosh API client.
-  # Swoosh supports Hackney and Finch out of the box:
-  #
-  #     config :swoosh, :api_client, Swoosh.ApiClient.Hackney
-  #
-  # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 end

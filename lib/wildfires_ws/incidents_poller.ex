@@ -64,7 +64,8 @@ defmodule WildfiresWs.IncidentsPoller do
     # Schedule next poll
     next_ref = Process.send_after(self(), :poll, state.poll_interval_ms)
 
-    {:noreply, %{state | first_run: false, last_poll_at: DateTime.utc_now(), next_poll_timer_ref: next_ref}}
+    {:noreply,
+     %{state | first_run: false, last_poll_at: DateTime.utc_now(), next_poll_timer_ref: next_ref}}
   end
 
   @impl true
@@ -86,12 +87,13 @@ defmodule WildfiresWs.IncidentsPoller do
         # Update ETS store
         update_ets_store(added, updated, deleted)
 
-        {:ok, %{
-          added: added,
-          updated: updated,
-          deleted: deleted,
-          all_features: geojson_features
-        }}
+        {:ok,
+         %{
+           added: added,
+           updated: updated,
+           deleted: deleted,
+           all_features: geojson_features
+         }}
 
       {:error, reason} ->
         {:error, reason}
@@ -108,7 +110,9 @@ defmodule WildfiresWs.IncidentsPoller do
   defp normalize_to_geojson_feature(%{"type" => "Feature"} = feature) do
     # Ensure the Feature has a stable id; prefer existing id, else OBJECTID from properties
     case feature do
-      %{"id" => id} when not is_nil(id) -> feature
+      %{"id" => id} when not is_nil(id) ->
+        feature
+
       _ ->
         objectid = get_in(feature, ["properties", "OBJECTID"])
         if is_integer(objectid), do: Map.put(feature, "id", objectid), else: feature
@@ -140,6 +144,7 @@ defmodule WildfiresWs.IncidentsPoller do
 
     # Compute updated (present in both but with differences)
     common_ids = MapSet.intersection(current_ids, new_ids)
+
     updated_ids =
       common_ids
       |> Enum.filter(fn id ->
@@ -196,6 +201,7 @@ defmodule WildfiresWs.IncidentsPoller do
       {:ok, _} ->
         WildfiresWsWeb.Endpoint.broadcast!("fires:incidents", "snapshot", snapshot)
         Logger.info("Broadcasted snapshot with #{length(event_data.all_features)} features")
+
       {:error, encode_error} ->
         Logger.error("Failed to encode snapshot to JSON: #{inspect(encode_error)}")
     end
@@ -209,14 +215,18 @@ defmodule WildfiresWs.IncidentsPoller do
       delta = %{
         added: added,
         updated: updated,
-        deleted: deleted  # Send as array of IDs to keep payload small
+        # Send as array of IDs to keep payload small
+        deleted: deleted
       }
 
       # Test JSON encoding before broadcasting
       case Jason.encode(delta) do
         {:ok, _json_string} ->
           WildfiresWsWeb.Endpoint.broadcast!("fires:incidents", "delta", delta)
-          Logger.info("Broadcasted delta: +#{length(added)} ~#{length(updated)} -#{length(deleted)}")
+
+          Logger.info(
+            "Broadcasted delta: +#{length(added)} ~#{length(updated)} -#{length(deleted)}"
+          )
 
         {:error, encode_error} ->
           Logger.error("Failed to encode delta to JSON: #{inspect(encode_error)}")
@@ -243,7 +253,9 @@ defmodule WildfiresWs.IncidentsPoller do
   def handle_call(:metrics, _from, state) do
     next_ms =
       case state.next_poll_timer_ref do
-        nil -> 0
+        nil ->
+          0
+
         ref ->
           case Process.read_timer(ref) do
             false -> 0
@@ -252,7 +264,8 @@ defmodule WildfiresWs.IncidentsPoller do
       end
 
     reply = %{
-      last_poll_at: if(state.last_poll_at, do: DateTime.to_iso8601(state.last_poll_at), else: nil),
+      last_poll_at:
+        if(state.last_poll_at, do: DateTime.to_iso8601(state.last_poll_at), else: nil),
       next_poll_in_ms: next_ms,
       incident_count: IncidentsStore.count()
     }

@@ -63,7 +63,8 @@ defmodule WildfiresWs.GeoJSON do
   def to_geojson_feature(%{
         "attributes" => %{"OBJECTID" => objectid} = attributes,
         "geometry" => %{"x" => lon, "y" => lat}
-      }) when is_number(lon) and is_number(lat) and is_integer(objectid) do
+      })
+      when is_number(lon) and is_number(lat) and is_integer(objectid) do
     # Remove OBJECTID from properties since it becomes the feature ID
     properties = Map.delete(attributes, "OBJECTID")
 
