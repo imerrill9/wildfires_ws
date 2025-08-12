@@ -5,12 +5,22 @@ defmodule WildfiresWsWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :browser do
+    plug :accepts, ["html"]
+  end
+
   pipeline :health do
     plug :accepts, ["json"]
   end
 
   scope "/api", WildfiresWsWeb do
     pipe_through :api
+  end
+
+  scope "/", WildfiresWsWeb do
+    pipe_through :browser
+
+    get "/", PageController, :index
   end
 
   scope "/", WildfiresWsWeb do

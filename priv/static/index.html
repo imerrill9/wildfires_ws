@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wildfires Map</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      html, body, #map { height: 100%; margin: 0; padding: 0; }
+      .leaflet-container { font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+      .fire-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 87, 34, 0.15);
+        box-shadow: 0 0 8px rgba(255, 87, 34, 0.4);
+        line-height: 1;
+        font-size: 18px;
+        user-select: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/phoenix@1.7.21/priv/static/phoenix.min.js"></script>
+    <script type="module">
+      const map = L.map('map', { preferCanvas: true }).setView([39.5, -98.35], 4);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      const layerGroup = L.layerGroup().addTo(map);
+      const markersById = new Map();
+
+      const fireIcon = L.divIcon({
+        className: '',
+        html: '<div class="fire-icon" title="Wildfire">🔥</div>',
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -14]
+      });
+
+      function featureToLatLng(feature) {
+        if (!feature || !feature.geometry) return null;
+        const geom = feature.geometry;
+        if (geom.type !== 'Point') return null;
+        const [lon, lat] = geom.coordinates || [];
+        if (typeof lat !== 'number' || typeof lon !== 'number') return null;
+        return [lat, lon];
+      }
+
+      function popupHtmlFor(feature) {
+        const id = feature.id ?? (feature.properties && feature.properties.OBJECTID);
+        const props = feature.properties || {};
+        const keys = Object.keys(props).slice(0, 6);
+        const rows = keys
+          .filter(k => {
+            const value = props[k];
+            return value != null && value !== '' && String(value).trim() !== '';
+          })
+          .map(k => `<div><strong>${k}</strong>: ${String(props[k])}</div>`)
+          .join('');
+        return `<div><div><strong>ID</strong>: ${id ?? 'n/a'}</div>${rows}</div>`;
+      }
+
+      function addOrUpdateMarker(feature) {
+        const id = feature.id;
+        const latlng = featureToLatLng(feature);
+        if (id == null || !latlng) return;
+        const existing = markersById.get(id);
+        if (existing) {
+          existing.setLatLng(latlng).setIcon(fireIcon).bindPopup(popupHtmlFor(feature));
+        } else {
+          const marker = L.marker(latlng, { icon: fireIcon }).bindPopup(popupHtmlFor(feature));
+          markersById.set(id, marker);
+          layerGroup.addLayer(marker);
+        }
+      }
+
+      function removeMarkerById(id) {
+        const marker = markersById.get(id);
+        if (marker) {
+          layerGroup.removeLayer(marker);
+          markersById.delete(id);
+        }
+      }
+
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+      const socketUrl = `${protocol}://${window.location.host}/socket`;
+      const socket = new window.Phoenix.Socket(socketUrl, {});
+      socket.connect();
+
+      const channel = socket.channel('fires:incidents', {});
+      channel.join().receive('error', (resp) => console.error('join error', resp));
+
+      channel.on('snapshot', (payload) => {
+        try {
+          layerGroup.clearLayers();
+          markersById.clear();
+          const features = (payload && payload.features) || [];
+          for (const f of features) addOrUpdateMarker(f);
+        } catch (e) {
+          console.error('snapshot handling failed', e);
+        }
+      });
+
+      channel.on('delta', (payload) => {
+        try {
+          const added = payload.added || [];
+          const updated = payload.updated || [];
+          const deleted = payload.deleted || [];
+          for (const f of added) addOrUpdateMarker(f);
+          for (const f of updated) addOrUpdateMarker(f);
+          for (const id of deleted) removeMarkerById(id);
+        } catch (e) {
+          console.error('delta handling failed', e);
+        }
+      });
+    </script>
+  </body>
+  </html>
+
+
