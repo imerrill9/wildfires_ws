@@ -29,7 +29,7 @@ defmodule WildfiresWs.ArcgisClient do
       {:error, :timeout}
   """
   def fetch_all_incidents do
-    url = System.get_env("ESRI_INCIDENTS_URL", @default_esri_url)
+    url = Application.get_env(:wildfires_ws, :esri_incidents_url, @default_esri_url)
     fetch_all_incidents_recursive(url, 0, [])
   end
 
@@ -99,7 +99,7 @@ defmodule WildfiresWs.ArcgisClient do
   end
 
   defp make_request(url, params) do
-    case Req.get(url, params: params, receive_timeout: 30_000) do
+    case Req.get(url, params: params, receive_timeout: 30_000, finch: WildfiresWs.Finch) do
       # Body already decoded by Req (common default)
       {:ok, %Req.Response{status: 200, body: %{} = decoded}} ->
         case Map.get(decoded, "error") do

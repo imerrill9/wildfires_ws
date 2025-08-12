@@ -14,16 +14,19 @@ defmodule WildfiresWs.Application do
       WildfiresWsWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:wildfires_ws, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: WildfiresWs.PubSub},
-      # Start the Finch HTTP client for sending emails
+      # Start the Finch HTTP client (used by Req)
       {Finch, name: WildfiresWs.Finch},
       # Start to serve requests, typically the last entry
       WildfiresWsWeb.Endpoint
     ]
 
     poller_children =
-      if Application.get_env(:wildfires_ws, :enable_poller, true),
-        do: [WildfiresWs.IncidentsPoller],
-        else: []
+      if Application.get_env(:wildfires_ws, :enable_poller, true) do
+        poll_ms = Application.get_env(:wildfires_ws, :poll_interval_ms, 30_000)
+        [{WildfiresWs.IncidentsPoller, poll_interval_ms: poll_ms}]
+      else
+        []
+      end
 
     children = base_children ++ poller_children
 

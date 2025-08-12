@@ -34,6 +34,7 @@ defmodule WildfiresWs.MixProject do
     [
       {:phoenix, "~> 1.7.21"},
       {:phoenix_live_dashboard, "~> 0.8.3"},
+      {:finch, "~> 0.13"},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},

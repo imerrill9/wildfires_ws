@@ -37,9 +37,7 @@ defmodule WildfiresWsWeb do
 
   def controller do
     quote do
-      use Phoenix.Controller,
-        formats: [:html, :json],
-        layouts: [html: WildfiresWsWeb.Layouts]
+      use Phoenix.Controller, formats: [:json]
 
       use Gettext, backend: WildfiresWsWeb.Gettext
 

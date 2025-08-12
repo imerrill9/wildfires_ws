@@ -10,7 +10,7 @@ import Config
 config :wildfires_ws,
   esri_incidents_url:
     System.get_env("ESRI_INCIDENTS_URL") ||
-      "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/0",
+      "https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/USA_Wildfires_v1/FeatureServer/0/query",
   poll_interval_ms: String.to_integer(System.get_env("POLL_INTERVAL_MS") || "30000")
 
 # Handle SECRET_KEY_BASE for all environments
@@ -39,8 +39,6 @@ config :wildfires_ws, WildfiresWsWeb.Endpoint,
     ip: {0, 0, 0, 0},
     port: String.to_integer(System.get_env("PORT") || "4000")
   ],
-  server: true,
-  render_errors: [view: WildfiresWsWeb.ErrorView, accepts: ~w(json), layout: false],
   pubsub_server: WildfiresWs.PubSub,
   secret_key_base: secret_key_base
 

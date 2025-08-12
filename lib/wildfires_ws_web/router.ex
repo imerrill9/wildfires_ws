@@ -25,7 +25,7 @@ defmodule WildfiresWsWeb.Router do
   end
 
   scope "/", WildfiresWsWeb do
-    pipe_through :health
+    pipe_through :api
 
     get "/_health", HealthController, :show
   end

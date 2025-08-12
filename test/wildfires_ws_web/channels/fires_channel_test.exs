@@ -15,7 +15,7 @@ defmodule WildfiresWsWeb.FiresChannelTest do
     :ok = IncidentsStore.put(%{"OBJECTID" => 2, "geometry" => %{}, "properties" => %{}})
 
     {:ok, socket} = connect(WildfiresWsWeb.UserSocket, %{})
-    {:ok, _, socket} = subscribe_and_join(socket, WildfiresWsWeb.FiresChannel, "fires:incidents")
+    {:ok, _, _socket} = subscribe_and_join(socket, WildfiresWsWeb.FiresChannel, "fires:incidents")
 
     assert_push "snapshot", %{"type" => "FeatureCollection", "features" => features}
     assert features |> Enum.map(& &1["id"]) |> Enum.sort() == [1, 2]
