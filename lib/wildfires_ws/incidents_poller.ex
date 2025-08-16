@@ -41,11 +41,13 @@ defmodule WildfiresWs.IncidentsPoller do
       poll_interval_ms: poll_interval_ms,
       first_run: true,
       last_poll_at: nil,
-      next_poll_timer_ref: nil
+      next_poll_timer_ref: nil,
+      backoff_ms: nil
     }
 
-    # Schedule immediate poll
-    Process.send_after(self(), :poll, 0)
+    # Schedule first poll with a slight delay to avoid crashing the supervisor
+    # in case a failure occurs during the very first attempt.
+    Process.send_after(self(), :poll, 25)
 
     Logger.info("IncidentsPoller started with poll interval: #{poll_interval_ms}ms")
     {:ok, state}
@@ -53,7 +55,20 @@ defmodule WildfiresWs.IncidentsPoller do
 
   @impl true
   def handle_info(:poll, state) do
-    case poll_and_process() do
+    result =
+      try do
+        poll_and_process()
+      rescue
+        exception ->
+          Logger.error("Unhandled exception during poll: #{inspect(exception)}")
+          {:error, {:exception, exception}}
+      catch
+        kind, reason ->
+          Logger.error("Caught throw during poll: #{inspect({kind, reason})}")
+          {:error, {:throw, {kind, reason}}}
+      end
+
+    case result do
       {:ok, event_data} ->
         broadcast_event(event_data, state.first_run)
 
@@ -61,11 +76,18 @@ defmodule WildfiresWs.IncidentsPoller do
         Logger.error("Failed to poll incidents: #{inspect(reason)}")
     end
 
-    # Schedule next poll
-    next_ref = Process.send_after(self(), :poll, state.poll_interval_ms)
+    # Schedule next poll with optional backoff on failures
+    {delay_ms, next_backoff_ms} = compute_next_delay_and_backoff(state, result)
+    next_ref = Process.send_after(self(), :poll, delay_ms)
 
     {:noreply,
-     %{state | first_run: false, last_poll_at: DateTime.utc_now(), next_poll_timer_ref: next_ref}}
+     %{
+       state
+       | first_run: false,
+         last_poll_at: DateTime.utc_now(),
+         next_poll_timer_ref: next_ref,
+         backoff_ms: next_backoff_ms
+     }}
   end
 
   @impl true
@@ -75,6 +97,26 @@ defmodule WildfiresWs.IncidentsPoller do
   end
 
   ## Private Functions
+
+  defp compute_next_delay_and_backoff(%{poll_interval_ms: base, backoff_ms: backoff_ms} = _state, result) do
+    max_backoff = base * 10
+
+    case result do
+      {:ok, _} ->
+        {base, nil}
+
+      {:error, _reason} ->
+        new_backoff =
+          case backoff_ms do
+            nil ->
+              min(div(base, 2), 5_000)
+            value when is_integer(value) ->
+              min(value * 2, max_backoff)
+          end
+
+        {max(base, new_backoff), new_backoff}
+    end
+  end
 
   defp poll_and_process do
     client_mod = Application.get_env(:wildfires_ws, :arcgis_client, ArcgisClient)
