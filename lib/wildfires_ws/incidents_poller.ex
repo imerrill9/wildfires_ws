@@ -108,21 +108,15 @@ defmodule WildfiresWs.IncidentsPoller do
     |> Enum.filter(& &1)
   end
 
-  # Accepts either a GeoJSON Feature or an ESRI feature and returns a GeoJSON Feature
+  # Accepts a GeoJSON Feature and ensures it has a stable id
   defp normalize_to_geojson_feature(%{"type" => "Feature"} = feature) do
-    # Ensure the Feature has a stable id; prefer existing id, else OBJECTID from properties
+    # Ensure the Feature has a stable id
     case feature do
       %{"id" => id} when not is_nil(id) ->
         feature
-
       _ ->
-        objectid = get_in(feature, ["properties", "OBJECTID"])
-        if is_integer(objectid), do: Map.put(feature, "id", objectid), else: feature
+        nil
     end
-  end
-
-  defp normalize_to_geojson_feature(%{"attributes" => _attrs, "geometry" => _geom} = esri_feature) do
-    GeoJSON.to_geojson_feature(esri_feature)
   end
 
   defp normalize_to_geojson_feature(_), do: nil
@@ -166,7 +160,7 @@ defmodule WildfiresWs.IncidentsPoller do
 
   defp feature_changed?(current_feature, new_feature) do
     # Compare maps excluding storage-only keys
-    drop_keys = ["id", "OBJECTID"]
+    drop_keys = ["id"]
     current_comparable = Map.drop(current_feature, drop_keys)
     new_comparable = Map.drop(new_feature, drop_keys)
 
@@ -176,15 +170,12 @@ defmodule WildfiresWs.IncidentsPoller do
   defp update_ets_store(added, updated, deleted) do
     # Add new features
     Enum.each(added, fn feature ->
-      # IncidentsStore expects OBJECTID field for put/1
-      feature_with_objectid = Map.put(feature, "OBJECTID", feature["id"])
-      IncidentsStore.put(feature_with_objectid)
+      IncidentsStore.put(feature)
     end)
 
     # Update existing features
     Enum.each(updated, fn feature ->
-      feature_with_objectid = Map.put(feature, "OBJECTID", feature["id"])
-      IncidentsStore.put(feature_with_objectid)
+      IncidentsStore.put(feature)
     end)
 
     # Delete removed features

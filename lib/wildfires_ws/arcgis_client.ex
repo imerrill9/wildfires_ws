@@ -18,12 +18,12 @@ defmodule WildfiresWs.ArcgisClient do
   Uses the ESRI_INCIDENTS_URL environment variable or falls back to the default URL.
   Requests GeoJSON format (f=geojson) by default and paginates until all records are retrieved.
 
-  Returns a list of features (GeoJSON Feature maps when f=geojson; ESRI features if provider ignores f=geojson).
+  Returns a list of GeoJSON Feature maps.
 
   ## Examples
 
       iex> WildfiresWs.ArcgisClient.fetch_all_incidents()
-      {:ok, [%{"attributes" => %{"OBJECTID" => 1, ...}, "geometry" => %{...}}, ...]}
+      {:ok, [%{"type" => "Feature", "id" => 1, "properties" => %{...}, "geometry" => %{...}}, ...]}
 
       iex> WildfiresWs.ArcgisClient.fetch_all_incidents()
       {:error, :timeout}
@@ -47,10 +47,10 @@ defmodule WildfiresWs.ArcgisClient do
 
     case fetch_with_retry(url, params) do
       {:ok, response} ->
-        # For both ESRI JSON and GeoJSON, the features are under "features"
+        # Features are under "features" in GeoJSON response
         features = Map.get(response, "features", [])
 
-        # Some servers only signal pagination via exceededTransferLimit in ESRI JSON; for GeoJSON just continue while page is full
+        # For GeoJSON, continue pagination while page is full
         exceeded_limit = Map.get(response, "exceededTransferLimit", false)
 
         new_accumulated = accumulated_features ++ features

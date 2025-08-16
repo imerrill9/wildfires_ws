@@ -61,7 +61,7 @@
       }
 
       function popupHtmlFor(feature) {
-        const id = feature.id ?? (feature.properties && feature.properties.OBJECTID);
+        const id = feature.id;
         const props = feature.properties || {};
         const keys = Object.keys(props).slice(0, 6);
         const rows = keys

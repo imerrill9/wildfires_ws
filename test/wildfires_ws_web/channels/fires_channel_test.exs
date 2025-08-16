@@ -11,8 +11,8 @@ defmodule WildfiresWsWeb.FiresChannelTest do
   end
 
   test "join pushes a snapshot of current ETS incidents" do
-    :ok = IncidentsStore.put(%{"OBJECTID" => 1, "geometry" => %{}, "properties" => %{}})
-    :ok = IncidentsStore.put(%{"OBJECTID" => 2, "geometry" => %{}, "properties" => %{}})
+    :ok = IncidentsStore.put(%{"id" => 1, "type" => "Feature", "geometry" => %{}, "properties" => %{}})
+    :ok = IncidentsStore.put(%{"id" => 2, "type" => "Feature", "geometry" => %{}, "properties" => %{}})
 
     {:ok, socket} = connect(WildfiresWsWeb.UserSocket, %{})
     {:ok, _, _socket} = subscribe_and_join(socket, WildfiresWsWeb.FiresChannel, "fires:incidents")

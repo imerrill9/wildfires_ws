@@ -2,31 +2,29 @@ defmodule WildfiresWs.IncidentsStore do
   @moduledoc """
   ETS-backed store for wildfire incident data.
 
-  Stores incidents as GeoJSON Feature maps keyed by OBJECTID.
+  Stores incidents as GeoJSON Feature maps keyed by id.
   """
 
   @doc """
   Stores a feature map in the incidents ETS table.
 
-  The feature_map should contain an "OBJECTID" key which will be used as the ETS key.
-  The stored feature will have its "id" set to the OBJECTID value to conform to GeoJSON Feature format.
+  The feature_map should contain an "id" key which will be used as the ETS key.
+  The feature is stored as-is since it's already in GeoJSON Feature format.
 
   ## Examples
 
-      iex> feature = %{"OBJECTID" => 123, "properties" => %{}, "geometry" => %{}}
+      iex> feature = %{"id" => 123, "properties" => %{}, "geometry" => %{}}
       iex> WildfiresWs.IncidentsStore.put(feature)
       :ok
   """
   def put(feature_map) when is_map(feature_map) do
-    object_id = Map.get(feature_map, "OBJECTID")
+    id = Map.get(feature_map, "id")
 
-    if object_id do
-      # Ensure the feature has "id" set to OBJECTID for GeoJSON compliance
-      feature_with_id = Map.put(feature_map, "id", object_id)
-      :ets.insert(:incidents, {object_id, feature_with_id})
+    if id do
+      :ets.insert(:incidents, {id, feature_map})
       :ok
     else
-      {:error, :missing_objectid}
+      {:error, :missing_id}
     end
   end
 
@@ -36,7 +34,7 @@ defmodule WildfiresWs.IncidentsStore do
   ## Examples
 
       iex> WildfiresWs.IncidentsStore.get_all()
-      [%{"id" => 123, "OBJECTID" => 123, ...}, ...]
+      [%{"id" => 123, ...}, ...]
   """
   def get_all do
     :incidents

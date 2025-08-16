@@ -8,17 +8,16 @@ defmodule WildfiresWs.IncidentsStoreTest do
     :ok
   end
 
-  test "put inserts by OBJECTID and sets id" do
-    :ok = IncidentsStore.put(%{"OBJECTID" => 42, "properties" => %{}, "geometry" => %{}})
+  test "put inserts by id" do
+    :ok = IncidentsStore.put(%{"id" => 42, "type" => "Feature", "properties" => %{}, "geometry" => %{}})
     assert IncidentsStore.count() == 1
 
     [feature] = IncidentsStore.get_all()
     assert feature["id"] == 42
-    assert feature["OBJECTID"] == 42
   end
 
-  test "put without OBJECTID returns error" do
-    assert {:error, :missing_objectid} = IncidentsStore.put(%{"geometry" => %{}})
+  test "put without id returns error" do
+    assert {:error, :missing_id} = IncidentsStore.put(%{"geometry" => %{}})
     assert IncidentsStore.count() == 0
   end
 end
