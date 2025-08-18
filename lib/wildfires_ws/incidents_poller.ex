@@ -45,12 +45,8 @@ defmodule WildfiresWs.IncidentsPoller do
       backoff_ms: nil
     }
 
-    # Schedule first poll with a slight delay to avoid crashing the supervisor
-    # in case a failure occurs during the very first attempt.
-    Process.send_after(self(), :poll, 25)
-
     Logger.info("IncidentsPoller started with poll interval: #{poll_interval_ms}ms")
-    {:ok, state}
+    {:ok, state, {:continue, :initial_poll}}
   end
 
   @impl true
@@ -92,6 +88,13 @@ defmodule WildfiresWs.IncidentsPoller do
 
   @impl true
   def handle_cast(:poll, state) do
+    send(self(), :poll)
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_continue(:initial_poll, state) do
+    # Trigger the first poll immediately after initialization
     send(self(), :poll)
     {:noreply, state}
   end
